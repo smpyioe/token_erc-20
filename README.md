@@ -35,7 +35,7 @@ forge create src/Token.sol:Token --rpc-url http://127.0.0.1:8545 --private-key <
 ### 3. Launch the frontend
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
 Then open your browser at **http://localhost:3000**
