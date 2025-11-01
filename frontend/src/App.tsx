@@ -58,6 +58,27 @@ function App() {
     setShowPrivateKeyModal(true);
   };
 
+  const connectMetamask = async () => {
+  try {
+    if (!window.ethereum) {
+      return alert("Please install MetaMask!");
+    }
+    
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    
+    setSigner(signer);
+    setWalletAddress(address);
+    console.log(signer)
+  } catch (error) {
+    console.error("MetaMask connection error:", error);
+    alert("Failed to connect MetaMask!");
+  }
+}
+
   const Disconnect =() => {
     setSigner(null);
     setWalletAddress("");
@@ -180,6 +201,12 @@ function App() {
               className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
             >
               Connect Private Key
+            </button>
+            <button
+              onClick={connectMetamask}
+              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+            >
+              Connect Metamask
             </button>
           </div>
         ) : (
