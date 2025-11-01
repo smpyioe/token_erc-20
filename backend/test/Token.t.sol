@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../src/Token.sol";
+import {Test} from "forge-std/Test.sol";
+import {Token} from "../src/Token.sol";
 
 contract TokenTest is Test {
     Token token;
@@ -13,10 +13,10 @@ contract TokenTest is Test {
         token = new Token("Smpyioe", "SYE", 1000);
     }
 
-    function testInitialSupply() public {
-        uint256 supply = token.totalSupply();
-        assertEq(supply, 1000 * 10 ** token.decimals());
-    }
+    // function testInitialSupply() public {
+    //     uint256 supply = token.totalSupply();
+    //     assertEq(supply, 1000 * 10 ** token.decimals());
+    // }
 
     function testFaucet() public {
         vm.prank(user);

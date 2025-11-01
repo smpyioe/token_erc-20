@@ -16,10 +16,10 @@ contract TokenFactory{
 
     event TokenCreated(address indexed owner, address tokenAddress);
 
-    function createToken(string name, string symbol, uint256 supply) external {
+    function createToken(string memory name, string memory symbol, uint256 supply) external {
         Token token = new Token(name,symbol,supply);
         userTokens[msg.sender].push(TokenInfo(address(token), name, symbol, supply));
-        emit TokenCreated(msg.sender, address(newToken));
+        emit TokenCreated(msg.sender, address(token));
     }
 
     function getMyTokens() external view returns (TokenInfo[] memory) {
