@@ -14,12 +14,10 @@ contract TokenFactory{
 
     mapping(address => TokenInfo[]) public userTokens;
 
-    event TokenCreated(address indexed owner, address tokenAddress);
 
     function createToken(string memory name, string memory symbol, uint256 supply) external {
         Token token = new Token(name,symbol,supply);
         userTokens[msg.sender].push(TokenInfo(address(token), name, symbol, supply));
-        emit TokenCreated(msg.sender, address(token));
     }
 
     function getMyTokens() external view returns (TokenInfo[] memory) {

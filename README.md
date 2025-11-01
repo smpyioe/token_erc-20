@@ -28,7 +28,6 @@ anvil
 
 ### 2. Deploy the contract
 ```bash
-forge create src/MyToken.sol:MyToken --private-key <PRIVATE_KEY>
 forge create src/Token.sol:Token --rpc-url http://127.0.0.1:8545 --private-key <PRIVATE_KEY> --broadcast --constructor-args <Name> <Symbol> <InitialSupply>
 ```
 
