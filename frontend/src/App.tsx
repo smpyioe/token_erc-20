@@ -65,6 +65,7 @@ function App() {
     }
     
     const provider = new ethers.BrowserProvider(window.ethereum);
+    console.log(provider)
     await provider.send("eth_requestAccounts", []);
     
     const signer = await provider.getSigner();
@@ -96,6 +97,24 @@ function App() {
 
   const handleDeploy = async () => {
     if (!signer) return alert("Please connect a wallet first!");
+
+    try {
+      const provider = (signer as any).provider ?? new ethers.BrowserProvider(window.ethereum);
+      const address = await signer.getAddress();
+      const balance = await provider.getBalance(address);
+
+      console.log("Using address:", address);
+      console.log("Balance (ETH):", ethers.formatEther(balance));
+
+      const minNeeded = ethers.parseEther("0.01");
+      if (balance < minNeeded) {
+        return alert(`Insufficient balance for deploy. Balance: ${ethers.formatEther(balance)} ETH`);
+      }
+    } catch (err) {
+      console.error("Balance check error:", err);
+      return alert("Failed to check balance before deploy");
+    }
+
     const factory = new ethers.ContractFactory(abi, bytecode, signer);
     const contract = await factory.deploy(name, symbol, supply);
     await contract.waitForDeployment();
@@ -105,6 +124,8 @@ function App() {
     setshowContracts(true);
     console.log("Contract deployed at:", address);
   };
+
+
 
   const getTokenName = async () =>{
     if (!signer) return alert("Please connect a wallet first!");
