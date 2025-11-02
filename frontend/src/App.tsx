@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { ethers } from 'ethers';
 import tokenArtifact from "./artifacts/Token.json";
+import tokenFactoryArtifact from "./artifacts/TokenFactory.json"
 import './App.css'
 
 
 
 function App() {
-  const abi = tokenArtifact.abi;
-  const bytecode = tokenArtifact.bytecode.object;
+  const contractTokenFacotryAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+  const abi_tokenFactory = tokenFactoryArtifact.abi;
+  const abi_token = tokenArtifact.abi;
 
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -22,15 +25,6 @@ function App() {
   const [showContracts, setshowContracts] = useState(false);
   const [contractAddress, setContractAddress] = useState("");
 
-
-  const [showName, setshowName] = useState(false);
-  const [showContractName, setshowContractName] = useState("");
-
-  const [showSymbol, setshowSymbol] = useState(false);
-  const [showContractSymbol, setshowContractSymbol] = useState("");
-
-  const [showSupply, setshowSupply] = useState(false);
-  const [showContractSupply, setshowContractSupply] = useState("");
 
 
   const [showBalanceOf, setshowBalanceOf] = useState(false);
@@ -52,6 +46,7 @@ function App() {
   const [showFaucetResult, setshowFaucetResult] = useState(false);
   const [FaucetResult, setFaucetResult] = useState<any>(null);
 
+  const [myTokens, setMyTokens] = useState<any[]>([]);
 
 
   const connectPrivateKey = () => {
@@ -95,71 +90,72 @@ function App() {
   };
 
 
+
+
   const handleDeploy = async () => {
     if (!signer) return alert("Please connect a wallet first!");
+    
+    try {
+      const TokenContract = new ethers.Contract(contractTokenFacotryAddress, abi_tokenFactory, signer);
+      
+      const tx = await TokenContract.createToken(name, symbol, supply);
+      console.log("Transaction sent:", tx.hash);
+      
+      const receipt = await tx.wait();
+      console.log("Transaction confirmed:", receipt);
+      
+      await getMyTokens();
+      
+    } catch (error) {
+      console.error("Deploy error:", error);
+      alert("Failed to deploy token!");
+    }
+  }
+
+
+
+  const getMyTokens = async () => {
+    if (!signer) return alert("Please connect a wallet first!");
+    const TokenContract = new ethers.Contract(contractTokenFacotryAddress, abi_tokenFactory, signer);
 
     try {
-      const provider = (signer as any).provider ?? new ethers.BrowserProvider(window.ethereum);
       const address = await signer.getAddress();
-      const balance = await provider.getBalance(address);
+      console.log("Calling getMyTokens() from:", address);
+      
+      const mytokens = await TokenContract.getMyTokens();
+      console.log("Raw tokens:", mytokens);
 
-      console.log("Using address:", address);
-      console.log("Balance (ETH):", ethers.formatEther(balance));
-
-      const minNeeded = ethers.parseEther("0.01");
-      if (balance < minNeeded) {
-        return alert(`Insufficient balance for deploy. Balance: ${ethers.formatEther(balance)} ETH`);
+      if (mytokens.length === 0) {
+        console.log("No tokens found for this address");
+        setMyTokens([]);
+        setshowContracts(false);
+        return;
       }
-    } catch (err) {
-      console.error("Balance check error:", err);
-      return alert("Failed to check balance before deploy");
+
+      const formattedTokens = mytokens.map((token: any, index: number) => ({
+        id: index + 1,
+        address: token.tokenAddress,
+        name: token.name,
+        symbol: token.symbol,
+        supply: Number(token.supply),
+      }));
+
+      console.table(formattedTokens);
+      setMyTokens(formattedTokens);
+      setshowContracts(true);
+    } catch (error) {
+      console.error("getMyTokens error:", error);
+      alert("Failed to fetch tokens!");
     }
-
-    const factory = new ethers.ContractFactory(abi, bytecode, signer);
-    const contract = await factory.deploy(name, symbol, supply);
-    await contract.waitForDeployment();
-
-    const address = contract.target as string;
-    setContractAddress(address);
-    setshowContracts(true);
-    console.log("Contract deployed at:", address);
   };
 
-
-
-  const getTokenName = async () =>{
-    if (!signer) return alert("Please connect a wallet first!");
-    const TokenContract = new ethers.Contract(contractAddress,abi,signer);
-    const token_name = await TokenContract.name();
-    console.log(token_name);
-    setshowContractName(token_name)
-    setshowName(true);
-  }
-
-  const getTokenSymbol = async () =>{
-    if (!signer) return alert("Please connect a wallet first!");
-    const TokenContract = new ethers.Contract(contractAddress,abi,signer);
-    const token_symbol = await TokenContract.symbol();
-    console.log(token_symbol);
-    setshowContractSymbol(token_symbol)
-    setshowSymbol(true);
-  }
-
-  const getTokenSupply = async () =>{
-    if (!signer) return alert("Please connect a wallet first!");
-    const TokenContract = new ethers.Contract(contractAddress,abi,signer);
-    const token_supply = await TokenContract.totalSupply();
-    console.log(token_supply);
-    setshowContractSupply(token_supply)
-    setshowSupply(true);
-  }
 
   const handleBalanceOf = async () =>{
     setshowBalanceOf(false);
     if (!signer) return alert("Please connect a wallet first!");
-    const TokenContract = new ethers.Contract(contractAddress,abi,signer);
+    const TokenContract = new ethers.Contract(contractAddress,abi_token,signer);
     const balance = await TokenContract.balanceOf(AddressBalanceOf);
-    console.log(balance);
+    console.log(contractAddress, balance);
     setAddressBalanceOfAmount(balance);
     setshowBalanceOfAmount(true);
     setAddressBalanceOf("");
@@ -168,10 +164,9 @@ function App() {
   const handleTransferTo = async () => {
     setshowTransfer(false);
     if (!signer) return alert("Please connect a wallet first!");
-    const TokenContract = new ethers.Contract(contractAddress,abi,signer);
+    const TokenContract = new ethers.Contract(contractAddress,abi_token,signer);
     const tx = await TokenContract.transfer(AddressTransfer,transferAmount);
     console.log("Transaction envoyée :", tx);
-
 
     const receipt = await tx.wait();
 
@@ -187,7 +182,7 @@ function App() {
     if (!signer) return alert("Please connect a wallet first!");
     
     try {
-      const TokenContract = new ethers.Contract(contractAddress, abi, signer);
+      const TokenContract = new ethers.Contract(contractAddress, abi_token, signer);
       const tx = await TokenContract.faucet(faucetAmount);
       console.log("Faucet transaction sent:", tx);
       
@@ -205,15 +200,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-
-      <div>
-        0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-      </div>
-      <div>
-        0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-      </div>
-
-
       <div className="flex justify-end p-4">
         {!walletAddress ? (
           <div className="flex space-x-2">
@@ -273,57 +259,6 @@ function App() {
         </div>
       )}
 
-      {showName && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-gray-800 p-6 rounded-xl w-96 space-y-4">
-            <p className="text-xl font-bold">Token Name:</p>
-            <p className="text-xl font-bold">{showContractName}</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setshowName(false)}
-                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSymbol && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-gray-800 p-6 rounded-xl w-96 space-y-4">
-            <p className="text-xl font-bold">Token Symbol:</p>
-            <p className="text-xl font-bold">{showContractSymbol}</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setshowSymbol(false)}
-                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {showSupply && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-gray-800 p-6 rounded-xl w-96 space-y-4">
-            <p className="text-xl font-bold">Token Supply:</p>
-            <p className="text-xl font-bold">{showContractSupply}</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setshowSupply(false)}
-                className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showBalanceOf && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -512,14 +447,15 @@ function App() {
         </div>
       </div>
 
-      {showContracts && (
+      {showContracts && myTokens.length > 0 && (
         <div className="flex flex-col items-center mt-8 px-4">
           <div className="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-6xl">
-            <h2 className="text-xl font-bold mb-4">Deployed Contracts</h2>
+            <h2 className="text-xl font-bold mb-4">My Deployed Tokens</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-700">
+                    <th className="p-3">ID</th>
                     <th className="p-3">Contract Address</th>
                     <th className="p-3">Name</th>
                     <th className="p-3">Symbol</th>
@@ -530,39 +466,48 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-gray-700 hover:bg-gray-700/50">
-                    <td className="p-3 font-mono text-sm">{contractAddress}</td>
-                    <td className="p-3">
-                      <button className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm" onClick={() => getTokenName()}>
-                        Name
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <button className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm" onClick={() => getTokenSymbol()}>
-                        Symbol
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <button className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm" onClick={() => getTokenSupply()}>
-                        Supply
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <button className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm" onClick={() => setshowBalanceOf(true)}>
-                        Check
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <button className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm" onClick={() => setshowTransfer(true)}>
-                        Transfer
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <button className="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm" onClick={() => setshowFaucet(true)}>
-                        Mint
-                      </button>
-                    </td>
-                  </tr>
+                  {myTokens.map((token) => (
+                    <tr key={token.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                      <td className="p-3">{token.id}</td>
+                      <td className="p-3 font-mono text-sm">{token.address}</td>
+                      <td className="p-3">{token.name}</td>
+                      <td className="p-3">{token.symbol}</td>
+                      <td className="p-3">{token.supply}</td>
+                      <td className="p-3">
+                        <button 
+                          className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm" 
+                          onClick={() => {
+                            setContractAddress(token.address);
+                            setshowBalanceOf(true);
+                          }}
+                        >
+                          Check
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        <button 
+                          className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm" 
+                          onClick={() => {
+                            setContractAddress(token.address);
+                            setshowTransfer(true);
+                          }}
+                        >
+                          Transfer
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        <button 
+                          className="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm" 
+                          onClick={() => {
+                            setContractAddress(token.address);
+                            setshowFaucet(true);
+                          }}
+                        >
+                          Mint
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
