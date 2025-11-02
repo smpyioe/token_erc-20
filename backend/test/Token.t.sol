@@ -10,7 +10,7 @@ contract TokenTest is Test {
     address user = address(0x1234);
 
     function setUp() public {
-        token = new Token("Smpyioe", "SYE", 1000);
+        token = new Token(msg.sender, "Smpyioe", "SYE", 1000);
     }
 
     // function testInitialSupply() public {

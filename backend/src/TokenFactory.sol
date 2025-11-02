@@ -16,7 +16,7 @@ contract TokenFactory{
 
 
     function createToken(string memory name, string memory symbol, uint256 supply) external {
-        Token token = new Token(name,symbol,supply);
+        Token token = new Token(msg.sender, name,symbol,supply);
         userTokens[msg.sender].push(TokenInfo(address(token), name, symbol, supply));
     }
 
