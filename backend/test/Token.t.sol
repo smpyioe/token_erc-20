@@ -13,10 +13,6 @@ contract TokenTest is Test {
         token = new Token(msg.sender, "Smpyioe", "SYE", 1000);
     }
 
-    // function testInitialSupply() public {
-    //     uint256 supply = token.totalSupply();
-    //     assertEq(supply, 1000 * 10 ** token.decimals());
-    // }
 
     function testFaucet() public {
         vm.prank(user);
